@@ -24,7 +24,7 @@ function CplexMathProgModel(;options...)
     return m
 end
 
-immutable CplexSolver <: AbstractMathProgSolver
+type CplexSolver <: AbstractMathProgSolver
     options
 end
 CplexSolver(;kwargs...) = CplexSolver(kwargs)
@@ -33,7 +33,38 @@ LinearQuadraticModel(s::CplexSolver) = CplexMathProgModel(;s.options...)
 ConicModel(s::CplexSolver) = LPQPtoConicBridge(LinearQuadraticModel(s))
 supportedcones(::CplexSolver) = [:Free,:Zero,:NonNeg,:NonPos,:SOC]
 
-function loadproblem!(m::CplexMathProgModel, filename::AbstractString)
+function setparameters!(s::CplexSolver; mpboptions...)
+    opts = collect(Any,s.options)
+    for (optname, optval) in mpboptions
+        if optname == :TimeLimit
+            push!(opts, (:CPX_PARAM_TILIM, optval))
+        elseif optname == :Silent
+            if optval == true
+                push!(opts, (:CPX_PARAM_SCRIND, 0))
+            end
+        else
+            error("Unrecognized parameter $optname")
+        end
+    end
+    s.options = opts
+    return
+end
+
+function setparameters!(s::CplexMathProgModel; mpboptions...)
+    for (optname, optval) in mpboptions
+        if optname == :TimeLimit
+            setparam!(m.inner, "CPX_PARAM_TILIM", optval)
+        elseif optname == :Silent
+            if optval == true
+                setparam!(m.inner,"CPX_PARAM_SCRIND",0)
+            end
+        else
+            error("Unrecognized parameter $optname")
+        end
+    end
+end
+
+function loadproblem!(m::CplexMathProgModel, filename::ASCIIString)
    read_model(m.inner, filename)
    prob_type = get_prob_type(m.inner)
    if prob_type in [:MILP,:MIQP, :MIQCP]
@@ -76,7 +107,7 @@ function loadproblem!(m::CplexMathProgModel, A, collb, colub, obj, rowlb, rowub,
   set_sense!(m.inner, sense)
 end
 
-writeproblem(m::CplexMathProgModel, filename::AbstractString) = write_model(m.inner, filename)
+writeproblem(m::CplexMathProgModel, filename::ASCIIString) = write_model(m.inner, filename)
 
 getvarLB(m::CplexMathProgModel) = get_varLB(m.inner)
 setvarLB!(m::CplexMathProgModel, l) = set_varLB!(m.inner, l)

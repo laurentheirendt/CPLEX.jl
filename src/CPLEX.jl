@@ -3,7 +3,7 @@ __precompile__()
 module CPLEX
 
     using Compat
-    import Compat.String
+    import Compat.ASCIIString
 
     if is_apple()
         Libdl.dlopen("libstdc++",Libdl.RTLD_GLOBAL)
@@ -16,7 +16,7 @@ module CPLEX
     end
 
     ### imports
-    import Base.convert, Base.show, Base.copy
+    import Base: convert, unsafe_convert, show, copy
 
     # Standard LP interface
     importall MathProgBase.SolverInterface
