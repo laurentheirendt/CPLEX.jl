@@ -6,29 +6,27 @@ function add_qpterms!(model::Model, qr::IVec, qc::IVec, qv::FVec)
     ((m = length(qr)) == length(qc) == length(qv)) || error("Inconsistent argument dimensions.")
     nqv = copy(qv)
     Q = sparse(qr, qc, nqv, n, n)
-    if istriu(Q) || istril(Q) || issym(Q)
+    if istriu(Q) || istril(Q) || issymmetric(Q)
         Q = Q + Q' - spdiagm(diag(Q)) # reconstruct full matrix like CPLEX wants
     else
         error("Matrix Q must be either symmetric or triangular")
     end
-    if nnz(Q) > 0
-        qmatcnt = Array(Cint, n)
-        for k = 1:n
-          qmatcnt[k] = Q.colptr[k+1] - Q.colptr[k]
-        end
-        stat = @cpx_ccall(copyquad, Cint, (
-                          Ptr{Void},
-                          Ptr{Void},
-                          Ptr{Cint},
-                          Ptr{Cint},
-                          Ptr{Cint},
-                          Ptr{Cdouble}
-                          ),
-                          model.env.ptr, model.lp, convert(Array{Cint,1}, Q.colptr[1:end-1].-1), convert(Array{Cint,1},qmatcnt), convert(Array{Cint,1}, Q.rowval.-1), Q.nzval)
-        if stat != 0
-            throw(CplexError(model.env, stat))
-        end
+    qmatcnt = Array(Cint, n)
+    for k = 1:n
+      qmatcnt[k] = Q.colptr[k+1] - Q.colptr[k]
     end
+    stat = @cpx_ccall(copyquad, Cint, (
+                      Ptr{Void},
+                      Ptr{Void},
+                      Ptr{Cint},
+                      Ptr{Cint},
+                      Ptr{Cint},
+                      Ptr{Cdouble}
+                      ),
+                      model.env.ptr, model.lp, convert(Array{Cint,1}, Q.colptr[1:end-1].-1), convert(Array{Cint,1},qmatcnt), convert(Array{Cint,1}, Q.rowval.-1), Q.nzval)
+    if stat != 0
+        throw(CplexError(model.env, stat))
+        end
     model.has_qc = true
     nothing
 end
