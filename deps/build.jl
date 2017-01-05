@@ -1,7 +1,3 @@
-using Compat
-
-import Compat: ASCIIString
-
 depsfile = joinpath(dirname(@__FILE__),"deps.jl")
 if isfile(depsfile)
     rm(depsfile)
@@ -19,9 +15,9 @@ if is_apple()
     Libdl.dlopen("libstdc++",Libdl.RTLD_GLOBAL)
 end
 
-cpxvers = ["125","1251","1260","1261","1262","1263"]
+cpxvers = ["1260","1261","1262","1263","1270"]
 
-libnames = ASCIIString["cplex"]
+libnames = String["cplex"]
 for v in reverse(cpxvers)
     if is_apple()
         push!(libnames, "libcplex$v.dylib")
@@ -30,15 +26,15 @@ for v in reverse(cpxvers)
     end
 end
 
-wincpxvers = ["126","1261","1262","1263"]
+wincpxvers = ["126","1261","1262","1263","1270","127"]
 if is_windows()
     for v in reverse(wincpxvers)
         env = "CPLEX_STUDIO_BINARIES$v"
         if haskey(ENV,env)
             for d in split(ENV[env],';')
                 contains(d,"cplex") || continue
-                if v == "126" # annoying inconsistency
-                    push!(libnames,joinpath(d,"cplex1260"))
+                if length(v) == 3 # annoying inconsistency
+                    push!(libnames,joinpath(d,"cplex$(v)0"))
                 else
                     push!(libnames,joinpath(d,"cplex$(v)"))
                 end
